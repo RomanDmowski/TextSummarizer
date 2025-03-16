@@ -22,7 +22,7 @@ interface RateLimitStore {
 
 const rateLimits = new Map<string, RateLimitStore>();
 const WINDOW_MS = 60 * 1000; // 1 minute
-const MAX_REQUESTS = 10;
+const MAX_REQUESTS = 2; // Changed from 10 to 2 for testing
 
 function checkRateLimit(ip: string): { allowed: boolean; retryAfter?: number } {
   const now = Date.now();
