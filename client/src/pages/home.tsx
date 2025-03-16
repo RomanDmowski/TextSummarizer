@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect as ReactuseEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -6,10 +6,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ClipboardCopy, Bot, X } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { motion } from "framer-motion";
 
 export default function Home() {
   const [text, setText] = useState("");
   const [summarized, setSummarized] = useState(false);
+  const [progress, setProgress] = useState(0);
   const { toast } = useToast();
 
   const { mutate: summarize, isPending } = useMutation({
@@ -51,6 +54,7 @@ export default function Home() {
 
   const handleSubmit = () => {
     setSummarized(false);
+    setProgress(0);
     summarize();
   };
 
@@ -59,25 +63,55 @@ export default function Home() {
     setSummarized(false);
   };
 
+  // Animate progress bar when loading
+  ReactuseEffect(() => {
+    if (isPending) {
+      const timer = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 90) return prev;
+          return prev + 10;
+        });
+      }, 500);
+      return () => clearInterval(timer);
+    } else {
+      setProgress(100);
+      const timer = setTimeout(() => setProgress(0), 400);
+      return () => clearTimeout(timer);
+    }
+  }, [isPending]);
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <Card className="mx-auto max-w-3xl">
         <CardContent className="p-6">
+          {isPending && (
+            <div className="absolute top-0 left-0 w-full">
+              <Progress value={progress} className="h-1 rounded-none" />
+            </div>
+          )}
           <div className="mb-6 flex items-center gap-2">
             <Bot className="h-8 w-8 text-primary" />
             <h1 className="text-2xl font-bold text-foreground">Text Summarizer</h1>
           </div>
 
           <div className="relative">
-            <Textarea
-              value={text}
-              onChange={(e) => {
-                setText(e.target.value);
-                setSummarized(false);
+            <motion.div
+              animate={{
+                opacity: isPending ? 0.5 : 1,
               }}
-              placeholder="Enter or paste your text here..."
-              className="min-h-[300px] mb-4 resize-none pr-10"
-            />
+              transition={{ duration: 0.2 }}
+            >
+              <Textarea
+                value={text}
+                onChange={(e) => {
+                  setText(e.target.value);
+                  setSummarized(false);
+                }}
+                placeholder="Enter or paste your text here..."
+                className="min-h-[300px] mb-4 resize-none pr-10"
+                disabled={isPending}
+              />
+            </motion.div>
             {text && (
               <Button
                 variant="ghost"
@@ -102,8 +136,8 @@ export default function Home() {
                 Copy to clipboard
               </Button>
             ) : (
-              <Button 
-                onClick={handleSubmit} 
+              <Button
+                onClick={handleSubmit}
                 disabled={!text.trim()}
               >
                 Summarize
