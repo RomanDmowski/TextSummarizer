@@ -1,4 +1,4 @@
-import { AzureFunction, Context, HttpRequest } from "@azure/functions";
+import { HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import { OpenAI } from "openai";
 import { z } from "zod";
 
@@ -78,31 +78,30 @@ async function analyzeText(text: string): Promise<TextAnalysis> {
   }
 }
 
-const httpTrigger: AzureFunction = async function (context: Context, req: HttpRequest): Promise<void> {
+export async function summarizeFunction(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   try {
-    const { text } = summarizeSchema.parse(req.body);
-    
+    const body = await request.json();
+    const { text } = summarizeSchema.parse(body);
+
     const analysis = await analyzeText(text);
     const formattedOutput = `${analysis.title}\n\nKey Facts:\n1. ${analysis.interestingFacts[0]}\n2. ${analysis.interestingFacts[1]}\n\nSummary:\n${analysis.summary}`;
 
-    context.res = {
+    return {
       status: 200,
-      body: { summary: formattedOutput }
+      jsonBody: { summary: formattedOutput }
     };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      context.res = {
+      return {
         status: 400,
-        body: { message: error.errors[0].message }
+        jsonBody: { message: error.errors[0].message }
       };
     } else {
       const message = error instanceof Error ? error.message : 'An unknown error occurred';
-      context.res = {
+      return {
         status: 500,
-        body: { message }
+        jsonBody: { message }
       };
     }
   }
-};
-
-export default httpTrigger;
+}

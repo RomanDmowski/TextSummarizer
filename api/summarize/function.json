@@ -13,5 +13,7 @@
       "direction": "out",
       "name": "res"
     }
-  ]
+  ],
+  "scriptFile": "index.js",
+  "nodeVersion": "~18"
 }
