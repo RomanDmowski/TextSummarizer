@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ClipboardCopy, Bot } from "lucide-react";
+import { Loader2, ClipboardCopy, Bot, X } from "lucide-react";
 
 export default function Home() {
   const [text, setText] = useState("");
@@ -51,6 +51,11 @@ export default function Home() {
     summarize();
   };
 
+  const handleClear = () => {
+    setText("");
+    setSummarized(false);
+  };
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <Card className="mx-auto max-w-3xl">
@@ -60,15 +65,27 @@ export default function Home() {
             <h1 className="text-2xl font-bold text-foreground">Text Summarizer</h1>
           </div>
 
-          <Textarea
-            value={text}
-            onChange={(e) => {
-              setText(e.target.value);
-              setSummarized(false);
-            }}
-            placeholder="Enter or paste your text here..."
-            className="min-h-[300px] mb-4 resize-none"
-          />
+          <div className="relative">
+            <Textarea
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                setSummarized(false);
+              }}
+              placeholder="Enter or paste your text here..."
+              className="min-h-[300px] mb-4 resize-none pr-10"
+            />
+            {text && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 h-8 w-8"
+                onClick={handleClear}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
 
           <div className="flex justify-end">
             {isPending ? (
