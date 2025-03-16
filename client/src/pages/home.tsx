@@ -26,6 +26,7 @@ export default function Home() {
         variant: "destructive",
         title: "Error",
         description: error.message,
+        duration: 5000,
       });
     },
   });
@@ -36,12 +37,14 @@ export default function Home() {
       toast({
         title: "Copied!",
         description: "Text has been copied to clipboard",
+        duration: 5000,
       });
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "Failed to copy text to clipboard",
+        duration: 5000,
       });
     }
   };
