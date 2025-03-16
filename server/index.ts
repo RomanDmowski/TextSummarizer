@@ -2,9 +2,50 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
+interface RateLimitStore {
+  timestamp: number;
+  count: number;
+}
+
+const rateLimits = new Map<string, RateLimitStore>();
+const WINDOW_MS = 60 * 1000; // 1 minute
+const MAX_REQUESTS = 10;
+
+const rateLimit = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.path.startsWith('/api')) {
+    return next();
+  }
+
+  const ip = req.ip;
+  const now = Date.now();
+  const windowStart = now - WINDOW_MS;
+
+  const current = rateLimits.get(ip);
+  if (!current || current.timestamp < windowStart) {
+    // First request or window expired
+    rateLimits.set(ip, { timestamp: now, count: 1 });
+    return next();
+  }
+
+  if (current.count >= MAX_REQUESTS) {
+    return res.status(429).json({
+      message: "Too many requests. Please try again in a minute.",
+      retryAfter: Math.ceil((current.timestamp + WINDOW_MS - now) / 1000)
+    });
+  }
+
+  // Increment the counter
+  current.count++;
+  rateLimits.set(ip, current);
+  next();
+};
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Add rate limiting middleware
+app.use(rateLimit);
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -47,18 +88,12 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
   const port = 5000;
   server.listen({
     port,

@@ -14,6 +14,40 @@ interface TextAnalysis {
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+// Rate limiting implementation
+interface RateLimitStore {
+  timestamp: number;
+  count: number;
+}
+
+const rateLimits = new Map<string, RateLimitStore>();
+const WINDOW_MS = 60 * 1000; // 1 minute
+const MAX_REQUESTS = 10;
+
+function checkRateLimit(ip: string): { allowed: boolean; retryAfter?: number } {
+  const now = Date.now();
+  const windowStart = now - WINDOW_MS;
+
+  const current = rateLimits.get(ip);
+  if (!current || current.timestamp < windowStart) {
+    // First request or window expired
+    rateLimits.set(ip, { timestamp: now, count: 1 });
+    return { allowed: true };
+  }
+
+  if (current.count >= MAX_REQUESTS) {
+    return {
+      allowed: false,
+      retryAfter: Math.ceil((current.timestamp + WINDOW_MS - now) / 1000)
+    };
+  }
+
+  // Increment the counter
+  current.count++;
+  rateLimits.set(ip, current);
+  return { allowed: true };
+}
+
 async function analyzeText(text: string): Promise<TextAnalysis> {
   try {
     // Step 1: Generate title
@@ -80,6 +114,20 @@ async function analyzeText(text: string): Promise<TextAnalysis> {
 
 export async function summarizeFunction(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   try {
+    // Check rate limit
+    const clientIp = request.headers.get("x-forwarded-for") || request.headers.get("client-ip") || "unknown";
+    const rateLimit = checkRateLimit(clientIp);
+
+    if (!rateLimit.allowed) {
+      return {
+        status: 429,
+        jsonBody: {
+          message: "Too many requests. Please try again in a minute.",
+          retryAfter: rateLimit.retryAfter
+        }
+      };
+    }
+
     const body = await request.json();
     const { text } = summarizeSchema.parse(body);
 
