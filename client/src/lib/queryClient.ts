@@ -12,7 +12,12 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
+  // Ensure the URL works with both local development and Azure Functions
+  const apiUrl = process.env.NODE_ENV === "production" 
+    ? `/api${url}` 
+    : url;
+
+  const res = await fetch(apiUrl, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
@@ -29,7 +34,11 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
+    const apiUrl = process.env.NODE_ENV === "production" 
+      ? `/api${queryKey[0]}` 
+      : queryKey[0] as string;
+
+    const res = await fetch(apiUrl, {
       credentials: "include",
     });
 
