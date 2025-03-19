@@ -20,7 +20,7 @@
    - App location: `/client`
    - Api location: `/api`
    - Output location: `dist/public`
-   - trigger build 01
+   - rd trigger build 00
 
 ### 2. Environment Variables
 Add the following environment variables in Azure Static Web Apps configuration:
